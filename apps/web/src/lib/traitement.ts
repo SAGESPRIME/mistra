@@ -89,17 +89,14 @@ async function doOcr(
   fichierUrl: string,
   fichierType: string,
 ): Promise<{ texte: string; confidence: number; pages: number }> {
-  let fileBuffer: Buffer;
-
-  try {
-    const response = await fetch(fichierUrl);
-    if (!response.ok) throw new Error(`HTTP ${response.status} sur ${fichierUrl}`);
-    fileBuffer = Buffer.from(await response.arrayBuffer());
-  } catch (err) {
-    throw new Error(`Fichier inaccessible : ${err instanceof Error ? err.message : err}`);
+  // Téléchargement du fichier depuis MinIO
+  const response = await fetch(fichierUrl);
+  if (!response.ok) {
+    throw new Error(`Fichier inaccessible (HTTP ${response.status}): ${fichierUrl}`);
   }
+  const fileBuffer = Buffer.from(await response.arrayBuffer());
 
-  // Essai avec Gotenberg
+  // Essai avec Gotenberg (sans AbortSignal pour compatibilité TypeScript)
   try {
     const formData = new FormData();
     const mimeType = fichierType === "pdf" ? "application/pdf" : `image/${fichierType}`;
@@ -109,7 +106,6 @@ async function doOcr(
     const ocrRes = await fetch(`${OCR_ENDPOINT}/forms/pdfengines/convert`, {
       method: "POST",
       body: formData,
-      signal: AbortSignal.timeout(30_000),
     });
 
     if (ocrRes.ok) {
@@ -120,7 +116,7 @@ async function doOcr(
       }
     }
   } catch {
-    // Gotenberg indisponible ou timeout → fallback
+    // Gotenberg indisponible → fallback
   }
 
   // Fallback : extraction directe du buffer (fonctionne pour les PDF natifs avec texte embarqué)
@@ -270,7 +266,6 @@ async function callLlm(prompt: string): Promise<string> {
       temperature: 0.1,
       max_tokens: 2_000,
     }),
-    signal: AbortSignal.timeout(60_000),
   });
 
   if (!res.ok) {
