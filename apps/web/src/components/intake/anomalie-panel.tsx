@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { Piece } from "@/lib/types";
 import { Button } from "../ui/button";
-import { apiFetch } from "@/lib/api";
 
 interface AnomaliePanelProps {
   piece: Piece;

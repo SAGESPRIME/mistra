@@ -14,7 +14,7 @@ export default function IntakePage() {
   const [filtre, setFiltre] = useState<PieceStatut | "tous">("tous");
   const [page, setPage] = useState(1);
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
-  const { pieces, total, loading, error, refresh } = usePieces(filtre, page);
+  const { pieces, total, loading, error, refresh } = usePieces(filtre, page, CABINET_ID);
 
   const handleUploaded = useCallback(() => {
     refresh();
@@ -31,7 +31,7 @@ export default function IntakePage() {
             await fetch(`/api/pieces/${selectedPieceId}/corriger`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ cabinet_id: CABINET_ID, piece_id: selectedPieceId, corrections }),
+              body: JSON.stringify({ cabinet_id: CABINET_ID, corrections }),
             });
             refresh();
             setSelectedPieceId(null);
@@ -83,7 +83,7 @@ function PieceDetailView({ pieceId, onBack, onCorriger }: {
   onCorriger: (corrections: Record<string, unknown>) => Promise<void>;
 }) {
   const { usePiece: usePieceHook } = require("@/hooks/use-piece");
-  const { piece, loading } = usePieceHook(pieceId);
+  const { piece, loading } = usePieceHook(pieceId, CABINET_ID);
 
   if (loading || !piece) {
     return <div style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>Chargement...</div>;

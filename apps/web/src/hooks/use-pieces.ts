@@ -9,8 +9,9 @@ interface PiecesResponse {
   limite: number;
 }
 
-export function usePieces(filtre: PieceStatut | "tous", page: number = 1) {
+export function usePieces(filtre: PieceStatut | "tous", page: number = 1, cabinetId?: string) {
   const params = new URLSearchParams();
+  params.set("cabinet_id", cabinetId ?? "00000000-0000-0000-0000-000000000001");
   if (filtre !== "tous") params.set("statut", filtre);
   params.set("page", String(page));
   params.set("limite", "20");
