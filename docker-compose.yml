@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://mistra:${DB_PASSWORD}@db:5432/mistra
+      - S3_ENDPOINT=http://storage:9000
+      - S3_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - S3_SECRET_KEY=${MINIO_SECRET_KEY}
+      - S3_BUCKET=pieces
+      - OCR_ENDPOINT=http://ocr:3000
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+      ocr:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mistra
+      POSTGRES_USER: mistra
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mistra_dev}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mistra"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  storage:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-mistra-dev}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-mistra-dev-secret-123}
+    volumes:
+      - miniodata:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+
+  ocr:
+    image: gotenberg/gotenberg:8
+    environment:
+      - CHROMIUM_DISABLE_ROUTES=1
+    ports:
+      - "3020:3000"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:
