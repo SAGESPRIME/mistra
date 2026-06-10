@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY apps/web/package.json ./apps/web/package.json
+ENV NODE_ENV=development
 RUN npm ci --workspaces
 
 # Build — copier TOUT depuis deps (node_modules des workspaces inclus)
