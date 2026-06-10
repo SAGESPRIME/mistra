@@ -201,36 +201,6 @@ export async function controlerPiece(cabinetId: string, pieceId: string): Promis
   return { statut, controles };
 }
 
-// ===== Workflow de traitement complet =====
-
-export async function traiterPiece(cabinetId: string, pieceId: string): Promise<Piece | null> {
-  const piece = await getPiece(cabinetId, pieceId);
-  if (!piece) return null;
-
-  // Si OCR déjà fait et pièce déjà en TRAITEMENT ou PRET, ne pas retraiter
-  if (piece.statut === "PRET") return piece;
-
-  // Note: en V1, l'OCR et le LLM sont appelés par le MCP server.
-  // Ici on simule le passage en TRAITEMENT puis on exécute le contrôle
-  // sur les données déjà présentes (qui seront remplies par le MCP).
-  // Pour le workflow complet, le MCP server doit tourner en parallèle.
-
-  // Si la pièce est en RECU → la passer en TRAITEMENT
-  if (piece.statut === "RECU") {
-    await query(
-      "UPDATE pieces SET statut = 'TRAITEMENT', updated_at = now() WHERE id = $1 AND cabinet_id = $2",
-      [pieceId, cabinetId],
-    );
-  }
-
-  // Si on a déjà des données extraites (type_document, montant), on peut contrôler
-  if (piece.type_document && piece.montant_ttc) {
-    await controlerPiece(cabinetId, pieceId);
-  }
-
-  return getPiece(cabinetId, pieceId);
-}
-
 // ===== Transformation ligne DB → Piece =====
 
 function rowToPiece(row: Record<string, unknown>): Piece {

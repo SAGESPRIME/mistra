@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPiece, traiterPiece } from "@/lib/db";
+import { createPiece } from "@/lib/db";
+import { uploadFichier } from "@/lib/stockage";
+import { traiterPiece } from "@/lib/traitement";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,10 +28,11 @@ export async function POST(request: NextRequest) {
 
     const fichierType = ext === "jpg" ? "jpeg" : ext;
 
-    // Stocker dans MinIO (V1: URL locale, sera remplacé par vrai upload S3)
-    const fichierUrl = `local://${cabinetId}/${Date.now()}-${file.name}`;
+    // Upload réel vers MinIO
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const fichierUrl = await uploadFichier(fileBuffer, cabinetId, file.name, fichierType);
 
-    // Créer la pièce en base
+    // Créer la pièce en base avec l'URL réelle
     const piece = await createPiece({
       cabinet_id: cabinetId,
       client_id: clientId,
@@ -39,16 +42,14 @@ export async function POST(request: NextRequest) {
       source: "upload",
     });
 
-    // Lancer le traitement en arrière-plan
-    // Le MCP server fera l'OCR + classification + extraction + contrôle
-    // Ici on lance le workflow qui appelle le MCP
+    // Lancer le traitement en arrière-plan (OCR → classification → extraction → contrôle)
     traiterPiece(cabinetId, piece.id).catch((err) => {
-      console.error(`Workflow échoué pour pièce ${piece.id}:`, err);
+      console.error(`[upload] Traitement échoué pour pièce ${piece.id}:`, err);
     });
 
     return NextResponse.json({ piece_id: piece.id, statut: "RECU" });
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error("[upload] Erreur:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchPieces, createPiece, traiterPiece } from "@/lib/db";
+import { searchPieces, createPiece } from "@/lib/db";
+import { traiterPiece } from "@/lib/traitement";
 
 // GET /api/pieces — Liste les pièces avec filtres
 export async function GET(request: NextRequest) {

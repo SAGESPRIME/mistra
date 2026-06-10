@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
     "@mistra/shared": "*",
     "next": "^15.1.0",
     "pg": "^8.13.0",
