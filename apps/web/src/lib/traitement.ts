@@ -10,7 +10,22 @@ const LLM_BASE_URL = process.env.LLM_BASE_URL ?? "https://api.openai.com/v1";
 const LLM_API_KEY = process.env.LLM_API_KEY ?? "";
 const LLM_MODEL = process.env.LLM_MODEL ?? "gpt-4o";
 
-// ===== Point d'entrée =====
+// ===== Point d'entrée avec buffer (upload direct, sans MinIO) =====
+
+export async function traiterPieceAvecBuffer(
+  cabinetId: string,
+  pieceId: string,
+  fileBuffer: Buffer,
+  fichierType: string,
+): Promise<void> {
+  await query(
+    "UPDATE pieces SET statut = 'TRAITEMENT', updated_at = now() WHERE id = $1 AND cabinet_id = $2 AND statut = 'RECU'",
+    [pieceId, cabinetId],
+  );
+  await pipeline(cabinetId, pieceId, fileBuffer, fichierType);
+}
+
+// ===== Point d'entrée depuis URL (retraitement, réservé aux futures relances) =====
 
 export async function traiterPiece(cabinetId: string, pieceId: string): Promise<void> {
   // Passer en TRAITEMENT
@@ -27,9 +42,25 @@ export async function traiterPiece(cabinetId: string, pieceId: string): Promise<
   const piece = res.rows[0] as { id: string; fichier_url: string; fichier_type: string } | undefined;
   if (!piece) return;
 
+  // Télécharger le fichier depuis l'URL stockée
+  const response = await fetch(piece.fichier_url);
+  if (!response.ok) {
+    await query(
+      "UPDATE pieces SET statut = 'ANOMALIE', controle_code = 'FICHIER_INACCESSIBLE', controle_message = $1, updated_at = now() WHERE id = $2 AND cabinet_id = $3",
+      [`HTTP ${response.status} sur ${piece.fichier_url}`, pieceId, cabinetId],
+    );
+    return;
+  }
+  const fileBuffer = Buffer.from(await response.arrayBuffer());
+  await pipeline(cabinetId, pieceId, fileBuffer, piece.fichier_type);
+}
+
+// ===== Pipeline commun =====
+
+async function pipeline(cabinetId: string, pieceId: string, fileBuffer: Buffer, fichierType: string): Promise<void> {
   try {
-    // Étape 1 : OCR
-    const { texte, confidence, pages } = await doOcr(piece.fichier_url, piece.fichier_type);
+    // Étape 1 : OCR (depuis le buffer en mémoire)
+    const { texte, confidence, pages } = await doOcr(fileBuffer, fichierType);
 
     await query(
       `UPDATE pieces SET ocr_texte = $1, ocr_confidence = $2, ocr_pages = $3, updated_at = now()
@@ -86,16 +117,9 @@ export async function traiterPiece(cabinetId: string, pieceId: string): Promise<
 // ===== OCR via Gotenberg =====
 
 async function doOcr(
-  fichierUrl: string,
+  fileBuffer: Buffer,
   fichierType: string,
 ): Promise<{ texte: string; confidence: number; pages: number }> {
-  // Téléchargement du fichier depuis MinIO
-  const response = await fetch(fichierUrl);
-  if (!response.ok) {
-    throw new Error(`Fichier inaccessible (HTTP ${response.status}): ${fichierUrl}`);
-  }
-  const fileBuffer = Buffer.from(await response.arrayBuffer());
-
   // Essai avec Gotenberg (sans AbortSignal pour compatibilité TypeScript)
   try {
     const formData = new FormData();

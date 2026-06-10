@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPiece } from "@/lib/db";
-import { uploadFichier } from "@/lib/stockage";
-import { traiterPiece } from "@/lib/traitement";
+import { traiterPieceAvecBuffer } from "@/lib/traitement";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,22 +27,22 @@ export async function POST(request: NextRequest) {
 
     const fichierType = ext === "jpg" ? "jpeg" : ext;
 
-    // Upload réel vers MinIO
+    // Lire le buffer avant de créer la pièce (nécessaire pour le traitement en arrière-plan)
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const fichierUrl = await uploadFichier(fileBuffer, cabinetId, file.name, fichierType);
 
-    // Créer la pièce en base avec l'URL réelle
+    // Créer la pièce en base (fichier_url = référence locale pour traçabilité)
     const piece = await createPiece({
       cabinet_id: cabinetId,
       client_id: clientId,
-      fichier_url: fichierUrl,
+      fichier_url: `upload://${cabinetId}/${Date.now()}-${file.name}`,
       fichier_nom: file.name,
       fichier_type: fichierType,
       source: "upload",
     });
 
     // Lancer le traitement en arrière-plan (OCR → classification → extraction → contrôle)
-    traiterPiece(cabinetId, piece.id).catch((err) => {
+    // Le buffer est passé directement — pas besoin de MinIO
+    traiterPieceAvecBuffer(cabinetId, piece.id, fileBuffer, fichierType).catch((err) => {
       console.error(`[upload] Traitement échoué pour pièce ${piece.id}:`, err);
     });
 
