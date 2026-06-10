@@ -50,7 +50,7 @@ export function PieceDetail({ piece, onCorriger, onBack }: PieceDetailProps) {
       {piece.warnings && piece.warnings.length > 0 && (
         <Card style={{ marginTop: 16, borderColor: "#fbbf24" }}>
           <h3 style={{ fontSize: 14, color: "#d97706", marginTop: 0 }}>Warnings</h3>
-          {piece.warnings.map((w, i) => (
+          {piece.warnings.map((w: { message: string }, i) => (
             <p key={i} style={{ fontSize: 13, color: "#92400e", margin: "4px 0" }}>⚠ {w.message}</p>
           ))}
         </Card>
