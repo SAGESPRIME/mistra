@@ -5,10 +5,13 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
+    "build": "npx tsc",
+    "dev": "npx tsc --watch"
   },
   "dependencies": {
     "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
   }
 }
