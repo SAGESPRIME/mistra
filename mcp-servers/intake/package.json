@@ -4,8 +4,8 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "npx -p typescript tsc",
+    "dev": "npx -p typescript tsc --watch",
     "start": "node dist/index.js"
   },
   "dependencies": {
