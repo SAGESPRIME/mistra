@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPiece } from "@/lib/db";
-import { traiterPieceAvecBuffer } from "@/lib/traitement";
+import { enregistrerFichier } from "@/lib/fichiers";
+import { lancerWorkflowIntake } from "@/lib/mastra-client";
+
+// POST /api/upload — Reçoit un fichier, le stocke, et délègue TOUT le traitement
+// au workflow Mastra "intake" (OCR → classification → extraction → rattachement → contrôle).
+// Cette route ne contient que de la validation d'entrée — aucune logique métier.
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,31 +28,33 @@ export async function POST(request: NextRequest) {
     if (!ext || !allowedTypes.includes(ext)) {
       return NextResponse.json({ error: "Format non supporté" }, { status: 400 });
     }
-
     const fichierType = ext === "jpg" ? "jpeg" : ext;
 
-    // Lire le buffer avant de créer la pièce (nécessaire pour le traitement en arrière-plan)
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    // Stocker le fichier sur disque — il sera servi au serveur MCP via /api/fichiers/...
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { url } = await enregistrerFichier(buffer, fichierType);
 
-    // Créer la pièce en base (fichier_url = référence locale pour traçabilité)
-    const piece = await createPiece({
+    // Lancer le workflow Mastra et attendre son verdict.
+    // L'état du run est persisté côté Mastra : pas de pièce bloquée en cas de crash.
+    const resultat = await lancerWorkflowIntake({
       cabinet_id: cabinetId,
       client_id: clientId,
-      fichier_url: `upload://${cabinetId}/${Date.now()}-${file.name}`,
+      fichier_url: url,
       fichier_nom: file.name,
       fichier_type: fichierType,
       source: "upload",
     });
 
-    // Lancer le traitement en arrière-plan (OCR → classification → extraction → contrôle)
-    // Le buffer est passé directement — pas besoin de MinIO
-    traiterPieceAvecBuffer(cabinetId, piece.id, fileBuffer, fichierType).catch((err) => {
-      console.error(`[upload] Traitement échoué pour pièce ${piece.id}:`, err);
+    return NextResponse.json({
+      piece_id: resultat.piece_id,
+      statut: resultat.statut,
+      controle_code: resultat.controle_code,
+      erreurs_count: resultat.erreurs_count,
+      warnings_count: resultat.warnings_count,
     });
-
-    return NextResponse.json({ piece_id: piece.id, statut: "RECU" });
   } catch (error) {
     console.error("[upload] Erreur:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

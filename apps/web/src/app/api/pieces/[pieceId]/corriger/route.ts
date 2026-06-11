@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { corrigerPiece, controlerPiece } from "@/lib/db";
+import { lancerWorkflowRecontrole } from "@/lib/mastra-client";
 
-// PATCH /api/pieces/[pieceId]/corriger — Corriger une anomalie et recontrôler
+// PATCH /api/pieces/[pieceId]/corriger — Corriger une anomalie et recontrôler.
+// Toute la logique (validation des champs, mise à jour, règles de contrôle)
+// vit dans le workflow Mastra "recontrole" et le tool intake_controler.
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ pieceId: string }> },
@@ -14,24 +17,22 @@ export async function PATCH(
       return NextResponse.json({ error: "cabinet_id et corrections requis" }, { status: 400 });
     }
 
-    // Corriger la pièce
-    const piece = await corrigerPiece(body.cabinet_id, pieceId, body.corrections);
-
-    if (!piece) {
-      return NextResponse.json({ error: "Pièce non trouvée ou pas en anomalie" }, { status: 404 });
-    }
-
-    // Recontrôler immédiatement
-    const controle = await controlerPiece(body.cabinet_id, pieceId);
+    const resultat = await lancerWorkflowRecontrole({
+      cabinet_id: body.cabinet_id,
+      piece_id: pieceId,
+      corrections: body.corrections,
+    });
 
     return NextResponse.json({
-      piece_id: pieceId,
-      champs_corriges: Object.keys(body.corrections),
-      statut: controle.statut,
-      controles: controle.controles,
+      piece_id: resultat.piece_id,
+      champs_corriges: resultat.champs_corriges,
+      statut: resultat.statut,
+      controle_code: resultat.controle_code,
+      controles: resultat.controles,
     });
   } catch (error) {
     console.error("PATCH /api/pieces/[pieceId]/corriger error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

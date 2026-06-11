@@ -85,8 +85,8 @@ export async function updateDonneesExtraites(
   data: Record<string, unknown>,
 ): Promise<Piece | null> {
   const fields: string[] = [];
-  const values: unknown[] = [pieceId, cabinetId];
-  let paramIdx = 3;
+  const values: unknown[] = [];
+  let paramIdx = 1;
 
   const allowedFields = [
     "date_piece", "date_echeance", "tiers_nom", "tiers_siret",

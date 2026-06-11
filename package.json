@@ -4,14 +4,19 @@
   "workspaces": [
     "packages/*",
     "mcp-servers/*",
-    "agents/*",
-    "apps/*"
+    "apps/*",
+    "orchestrator"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
     "dev": "npm run dev --workspace=apps/web",
     "dev:mcp": "npm run dev --workspace=mcp-servers/intake",
+    "dev:mastra": "npm run dev --workspace=orchestrator",
+    "db:local": "node scripts/db-local.mjs",
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^18.4.0-beta.17"
   }
 }

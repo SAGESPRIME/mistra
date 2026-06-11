@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchPieces, createPiece } from "@/lib/db";
-import { traiterPiece } from "@/lib/traitement";
+import { searchPieces } from "@/lib/queries";
+import { lancerWorkflowIntake } from "@/lib/mastra-client";
 
 // GET /api/pieces — Liste les pièces avec filtres
 export async function GET(request: NextRequest) {
@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/pieces — Crée une pièce et lance le traitement
+// POST /api/pieces — Lance le workflow intake sur un fichier déjà accessible par URL
+// (la création de la pièce est faite par le workflow lui-même — step recevoir-fichier)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Champs manquants: cabinet_id, client_id, fichier_url, fichier_nom, fichier_type" }, { status: 400 });
     }
 
-    const piece = await createPiece({
+    const resultat = await lancerWorkflowIntake({
       cabinet_id: body.cabinet_id,
       client_id: body.client_id,
       fichier_url: body.fichier_url,
@@ -49,12 +50,10 @@ export async function POST(request: NextRequest) {
       source: body.source ?? "upload",
     });
 
-    // Lancer le traitement en arrière-plan
-    traiterPiece(body.cabinet_id, piece.id).catch(console.error);
-
-    return NextResponse.json({ piece_id: piece.id, statut: "RECU" });
+    return NextResponse.json({ piece_id: resultat.piece_id, statut: resultat.statut });
   } catch (error) {
     console.error("POST /api/pieces error:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

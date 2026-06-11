@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { CorrigerPieceInput } from "@mistra/shared";
 import { getPieceById, corriger } from "../db/pieces.repository.js";
 import { mcpSuccess, mcpError } from "@mistra/shared";

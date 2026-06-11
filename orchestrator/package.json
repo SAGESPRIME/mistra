@@ -1,0 +1,21 @@
+{
+  "name": "@mistra/orchestrator",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "mastra dev",
+    "build": "mastra build",
+    "start": "mastra start"
+  },
+  "dependencies": {
+    "@mastra/core": "^1.41.0",
+    "@mastra/mcp": "^1.9.1",
+    "@mastra/pg": "^1.12.1",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "mastra": "^1.12.2",
+    "typescript": "~5.9.0"
+  }
+}

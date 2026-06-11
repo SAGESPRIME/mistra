@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { RechercherPiecesInput } from "@mistra/shared";
 import { rechercherPieces } from "../db/pieces.repository.js";
 import { mcpSuccess, mcpError } from "@mistra/shared";

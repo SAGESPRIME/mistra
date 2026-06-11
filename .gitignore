@@ -1,6 +1,10 @@
 node_modules
 dist
 .next
+.mastra
+data/
+uploads/
+*.tsbuildinfo
 .env
 *.log
 .turbo

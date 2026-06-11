@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPiece } from "@/lib/db";
+import { getPiece } from "@/lib/queries";
 
 // GET /api/pieces/[pieceId] — Détail d'une pièce
 export async function GET(
