@@ -45,4 +45,5 @@ COPY --from=builder /app/mcp-servers/intake/package.json /repo/mcp-servers/intak
 ENV MCP_INTAKE_PATH=/repo/mcp-servers/intake/dist/index.js
 
 EXPOSE 4111
-CMD ["node", "index.mjs"]
+# DEBUG : capture stderr + garder le conteneur vivant 60s après crash pour lire les logs
+CMD ["sh", "-c", "echo '=== START orchestrator ===' && ls -la && node index.mjs 2>&1; echo \"EXIT CODE: $?\"; sleep 60"]
