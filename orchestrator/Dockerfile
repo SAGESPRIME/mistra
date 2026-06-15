@@ -35,7 +35,14 @@ ENV NODE_ENV=production
 # 1. Le bundle Mastra autonome (contient déjà ses propres node_modules)
 COPY --from=builder /app/orchestrator/.mastra/output ./
 
-# 2. Le serveur MCP intake (lancé en sous-processus stdio par l'orchestrator)
+# 2. Dépendances runtime de l'orchestrator.
+# Selon la version de Mastra, le bundle peut encore résoudre des packages
+# depuis /app/node_modules au démarrage.
+COPY --from=deps-prod /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
+
+# 3. Le serveur MCP intake (lancé en sous-processus stdio par l'orchestrator)
 #    avec ses dépendances de production dans une arborescence séparée /repo
 COPY --from=deps-prod /app/node_modules /repo/node_modules
 COPY --from=builder /app/packages/shared/dist /repo/packages/shared/dist
