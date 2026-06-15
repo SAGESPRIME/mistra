@@ -16,12 +16,13 @@ RUN npm ci --workspaces --if-present --omit=dev
 # ----- Build (dépendances complètes : tsc + mastra CLI) -----
 FROM base AS builder
 WORKDIR /app
+ENV NODE_ENV=development
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY mcp-servers/intake/package.json ./mcp-servers/intake/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY orchestrator/package.json ./orchestrator/package.json
-RUN npm ci --workspaces --if-present
+RUN npm ci --workspaces --if-present --include=dev
 COPY . .
 RUN npm run build --workspace=@mistra/shared
 RUN npm run build --workspace=@mistra/mcp-intake
